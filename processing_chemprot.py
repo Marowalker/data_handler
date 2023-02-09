@@ -139,6 +139,8 @@ for dataset in datasets:
     doc_entities = defaultdict(list)
     doc_relations = defaultdict(list)
 
+    entity_id_dict = defaultdict()
+
     for line in text_docs.readlines():
         doc_idx, title, abstract = line.split('\t')
         doc_titles[doc_idx] = doc_idx + '|t|' + title.strip() + '\n'
@@ -151,6 +153,8 @@ for dataset in datasets:
         ent_name = ent_name.strip()
         ent_type = ent_type.strip()
 
+        ent_idx = ent_idx.strip()
+
         if 'CHEMICAL' == ent_type:
             for k in biogrid_chem_ids:
                 if ent_name in biogrid_chem_ids[k]:
@@ -161,20 +165,30 @@ for dataset in datasets:
                     idx_list.append(k)
 
         if len(idx_list) > 1:
+            entity_id_dict[ent_idx] = '|'.join(idx_list)
             ent_idx = '|'.join(idx_list)
         elif len(idx_list) == 1:
+            entity_id_dict[ent_idx] = idx_list[0]
             ent_idx = idx_list[0]
         else:
             print('Not found: {}\t{}'.format(ent_type, ent_name))
+            entity_id_dict[ent_idx] = ent_idx
 
         doc_entities[doc_idx].append(
             '{}\t{}\t{}\t{}\t{}\t{}\n'.format(doc_idx, start_offset, end_offset, ent_name,
-                                              ent_type, ent_idx.strip()))
+                                              ent_type, ent_idx))
 
     for line in relation_docs.readlines():
         doc_idx, rel_type, e1, e2 = line.split('\t')
         e1 = doc_idx + re.sub(r"Arg\d:", '', e1)
         e2 = doc_idx + re.sub(r"Arg\d:", '', e2)
+
+        e1 = e1.strip()
+        e2 = e2.strip()
+
+        e1 = entity_id_dict[e1]
+        e2 = entity_id_dict[e2]
+
         doc_relations[doc_idx].append('{}\t{}\t{}\t{}\n'.format(doc_idx, rel_type, e1.strip(), e2.strip()))
 
     with open(constants.CHEMPROT + 'processed/chemprot_data.' + dataset + '.txt', 'w', encoding='utf-8') as f:
